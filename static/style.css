@@ -185,6 +185,10 @@ header>a>svg{
     padding-left:20px;
 }
 
+#profileButton{
+    grid-column: span 2;
+    border-radius:5px;
+}
 
 nav{
     height:50px;

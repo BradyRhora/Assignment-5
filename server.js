@@ -9,8 +9,7 @@ const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
 const clientSessions = require("client-sessions");
 
-//mongoose.connect(process.env.mongooseToken)
-mongoose.connect('mongodb+srv://BH_Admin:CVk8DOObYwNA8IH4@web322-assgn4.lkedtm2.mongodb.net/bradyhosting_db?retryWrites=true&w=majority');
+mongoose.connect(process.env.mongooseToken || 'mongodb+srv://BH_Admin:CVk8DOObYwNA8IH4@web322-assgn4.lkedtm2.mongodb.net/bradyhosting_db?retryWrites=true&w=majority');
 
 const userSchema = new Schema({
     "userName": {
@@ -68,6 +67,31 @@ app.use(express.static("static"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(clientSessions({
+    cookieName: "session",
+    secret: "web322_assignment5_nKIRJgoUsjugprOSK",
+    duration: 2 * 60 * 1000,
+    activeDuration: 1000 * 60 
+  }));
+
+function ensureLogin(req, res, next){
+    if (!req.session.user)
+        res.redirect("/login");
+    else 
+        next();
+}
+
+function checkLogin(req, res, next){
+    if (req.session.user)
+    {
+        User.findById(req.session.user.id).lean().exec().then((user) => {
+            req.userData = user;
+            next();
+        })
+    }
+    else next();
+}
+
 app.engine(".hbs", exphbs.engine({ extname: ".hbs" }));
 app.set("view engine", ".hbs");
 
@@ -83,7 +107,8 @@ app.post("/login-user", upload.none(), (req, res) => {
                 bcrypt.compare(data.password,user.passHash).then((matches) => {
                     if (matches)
                     {
-                        res.json({success:true,username:data.username,password:data.password});
+                        req.session.user = { id: user._id };
+                        res.redirect("/dashboard");
                     }
                     else res.json({error :"password", error_msg:"Password incorrect."})
                 });
@@ -94,28 +119,19 @@ app.post("/login-user", upload.none(), (req, res) => {
         res.json({error: "missing_vals", error_msg:"Please fill in username and password."});
 });
 
-app.post("/dashboard", upload.none(), (req, res) =>{
-    const data = req.body;
-    if (data.username && data.password){
-        User.findOne({userName:data.username}).lean().exec().then((user) => {
-            if (user){
-                bcrypt.compare(data.password,user.passHash).then((matches) => {
-                    if (matches) {
-                        let data = {user:user};
-                        if (user.isAdmin) {
-                            User.find().lean().exec().then((users) => {
-                                    data['users'] = users;
-                                    res.render('dashboard',data);
-                            });
-                        }
-                        else
-                            res.render('dashboard',data);
-                    }
+app.get("/dashboard", upload.none(), ensureLogin, (req, res) =>
+{
+    User.findById(req.session.user.id).lean().exec().then((user) => {
+            let data = {user:user};
+            if (user.isAdmin) {
+                User.find().lean().exec().then((users) => {
+                        data['users'] = users;
+                        res.render('dashboard',data);
                 });
-            } 
-            else res.status(401).send('Access Denied - User not found');
-        });
-    } else res.status(401).send('Access Denied - Missing username and/or password');
+            }
+            else
+                res.render('dashboard',data);
+    });
 });
 
 app.get("/registration", (req,res) => {
@@ -180,33 +196,38 @@ app.post("/register-user", upload.none(), (req,res) =>{
     }
 });
 
-app.get("/blog", (req,res) => {
+app.get("/blog", checkLogin, (req,res) => {
     Article.find().sort({date:"desc"}).exec().then((articles)=>{
         articles = articles.map(value => {
             let v = value.toObject()
-            v.content = v.content.substring(0,100) + '...';
+            v.content = v.content.substring(0,70) + '...';
             return v;
         });
         
-        res.render('blog', {data:articles});
+        let pageData = {data:articles};
+        if (req.userData) pageData["user"] = req.userData;
+        
+        res.render('blog', pageData);
     });
 });
 
-app.get("/article/:id", (req,res) => {
+app.get("/article/:id",checkLogin, (req,res) => {
     Article.findById(req.params.id).lean().exec().then((article)=>{
         Comment.find({articleID:article._id}).sort({date:"asc"}).lean().exec().then((comments) =>{
             comments.map(c=>{
                 c.date = c.date.toLocaleString("en-US");
                 return c;
             })
-            res.render('read_more', {article:article, comments:comments});
+
+        let pageData = {article:article, comments:comments};
+        if (req.userData) pageData["user"] = req.userData;
+            res.render('read_more', pageData);
         });
     });
 });
 
 app.post("/comment", upload.none(), (req,res) => {
     const data = req.body;
-    console.log(data);
     if (data.comment && data.email && data.articleID){
         Article.findOne({_id:data.articleID}).exec().then((article)=>{
             if (article){
@@ -218,13 +239,18 @@ app.post("/comment", upload.none(), (req,res) => {
                     date: Date.now(),
                     articleID: article._id
                 }).save().then(()=>{
-                    res.status(200);
+                    res.redirect('back');
                 });
             } else res.status(400);
         });
         
     }
 
+});
+
+app.get("/logout", (req,res)=>{
+    req.session.reset();
+    res.redirect("back");
 });
 
 app.listen(HTTP_PORT);
