@@ -115,6 +115,10 @@ function checkLogin(req, res, next){
 app.engine(".hbs", exphbs.engine({ extname: ".hbs" }));
 app.set("view engine", ".hbs");
 
+app.get("/", (req,res)=>{
+    res.redirect("/blog");
+})
+
 app.get("/login", (req,res) => {
     res.render('login', {title:'BradyHosting Login'});
 });
