@@ -53,6 +53,16 @@ article>img{
     margin-top:0px;
 }
 
+#article-builder{
+    background-color: rgb(107, 107, 107);
+    display:grid;
+    grid-template-columns: 1fr;
+}
+
+#article-builder>label{
+    padding:5px;
+}
+
 article>form>input,article>form>textarea{
     width:97%;
     resize:none;
@@ -127,6 +137,10 @@ input, select, textarea{
     padding:0px;
 }
 
+.errorText{
+    color:red;
+}
+
 .formError::placeholder, .formError[name="country"]{
     background-color: rgb(255, 94, 94);
     color: white;
@@ -186,8 +200,10 @@ header>a>svg{
 }
 
 #profileButton{
-    grid-column: span 2;
+    background-color: rgb(53, 184, 224);
     border-radius:5px;
+    padding-right:5px;
+    padding-left:5px;
 }
 
 nav{
@@ -377,6 +393,12 @@ footer>p{
 
 #dashboard-grid > div > * {
     margin-left: 20px;
+}
+
+#create-article-button{
+    text-align: center;
+    padding:30px;
+    font-size:20px;
 }
 
 @media (max-width:1000px){

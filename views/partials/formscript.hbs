@@ -30,7 +30,7 @@
 
                     elem.innerText = resp.error_msg;
                     elem.style.left = causePos.left.toString() + 'px';
-                    elem.style.top = causePos.bottom.toString() + 'px';
+                    elem.style.top = (causePos.bottom - 15).toString() + 'px';
                     elem.style.display="block";
                 }
                 else 
@@ -40,28 +40,11 @@
 
                     elem.innerText = resp.error_msg;
                     elem.style.left = causePos.left.toString() + 'px';
-                    elem.style.top = causePos.bottom.toString() + 'px';
+                    elem.style.top = (causePos.bottom - 15).toString() + 'px';
                     elem.style.display="block";
                 }
-            } else if (resp.success && {{{onsuccess}}} != '') {
-                const newForm = document.createElement('form');
-                newForm.method = 'post';
-                newForm.action = {{{onsuccess}}};
-
-                let hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = 'username';
-                hiddenField.value = resp.username;
-                newForm.appendChild(hiddenField);
-
-                hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = 'password';
-                hiddenField.value = resp.password;
-                newForm.appendChild(hiddenField);
-
-                document.body.appendChild(newForm);
-                newForm.submit();
+            } else if (resp.success) {                
+                window.location = "/dashboard";
             }
         });
     }

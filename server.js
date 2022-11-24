@@ -3,7 +3,6 @@ const express = require("express");
 const exphbs = require("express-handlebars");
 const path = require("path");
 const multer = require("multer");
-const upload = multer();
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
@@ -70,15 +69,36 @@ app.use(express.urlencoded({ extended: true }));
 app.use(clientSessions({
     cookieName: "session",
     secret: "web322_assignment5_nKIRJgoUsjugprOSK",
-    duration: 2 * 60 * 1000,
-    activeDuration: 1000 * 60 
+    duration: 5 * 60 * 1000,
+    activeDuration: 3 * 1000 * 60 
   }));
+
+const storage = multer.diskStorage({
+    destination: "./static/resources/",
+    filename:function(req,file,cb){
+        cb(null,Date.now() + path.extname(file.originalname));
+    }
+})
+
+const upload = multer({storage:storage});
 
 function ensureLogin(req, res, next){
     if (!req.session.user)
         res.redirect("/login");
     else 
         next();
+}
+
+function ensureAdmin(req, res, next){
+    if (req.session.user)
+    {
+        User.findById(req.session.user.id).lean().exec().then((user) => {
+            if (user.isAdmin)
+                next();
+            else res.status(403);
+        })
+    }
+    else res.redirect("/login");
 }
 
 function checkLogin(req, res, next){
@@ -110,13 +130,13 @@ app.post("/login-user", upload.none(), (req, res) => {
                         req.session.user = { id: user._id };
                         res.redirect("/dashboard");
                     }
-                    else res.json({error :"password", error_msg:"Password incorrect."})
+                    else res.render('login', {error :"password", error_msg:"Password incorrect."})
                 });
             } 
-            else res.json({error :"username", error_msg:"No account found with this username."})
+            else res.render('login',{error :"username", error_msg:"No account found with this username."})
         });
     } else
-        res.json({error: "missing_vals", error_msg:"Please fill in username and password."});
+        res.render('login',{error: "missing_vals", error_msg:"Please fill in username and password."});
 });
 
 app.get("/dashboard", upload.none(), ensureLogin, (req, res) =>
@@ -185,8 +205,11 @@ app.post("/register-user", upload.none(), (req,res) =>{
                             passHash:hash
                         });
                         user.save().then(() => {
-                            let returnData = {success:true,username:data.username,password:data.password};
-                            res.json(returnData);
+                            User.findOne({userName:data.username}).exec().then((u)=>{
+                                req.session.user = { id: u._id };
+                                res.json({success:true})
+                            });
+
                         });
                     });
                     
@@ -213,16 +236,18 @@ app.get("/blog", checkLogin, (req,res) => {
 
 app.get("/article/:id",checkLogin, (req,res) => {
     Article.findById(req.params.id).lean().exec().then((article)=>{
-        Comment.find({articleID:article._id}).sort({date:"asc"}).lean().exec().then((comments) =>{
-            comments.map(c=>{
-                c.date = c.date.toLocaleString("en-US");
-                return c;
-            })
+        if (article) {
+            Comment.find({articleID:article._id}).sort({date:"asc"}).lean().exec().then((comments) =>{
+                comments.map(c=>{
+                    c.date = c.date.toLocaleString("en-US");
+                    return c;
+                })
 
-        let pageData = {article:article, comments:comments};
-        if (req.userData) pageData["user"] = req.userData;
-            res.render('read_more', pageData);
-        });
+            let pageData = {article:article, comments:comments};
+            if (req.userData) pageData["user"] = req.userData;
+                res.render('read_more', pageData);
+            });
+        } else res.render('error', {error:"Article not found."});
     });
 });
 
@@ -246,6 +271,25 @@ app.post("/comment", upload.none(), (req,res) => {
         
     }
 
+});
+
+app.get("/create-article", ensureAdmin, checkLogin, (req,res) =>{
+    res.render('createArticle', {user: req.userData} );
+});
+
+app.post("/save-article", ensureAdmin, upload.single("image"), (req,res) =>{    
+    const data = req.body;
+    if (data.title && data.author && data.content && req.file.filename){
+        new Article({
+            headline:data.title,
+            author:data.author,
+            image_path:"/resources/" + req.file.filename,
+            date:Date.now(),
+            content:data.content
+        }).save().then((article)=>{
+            res.redirect('/article/' + article._id);
+        });
+    } else res.send("Missing article content.");
 });
 
 app.get("/logout", (req,res)=>{
