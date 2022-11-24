@@ -144,8 +144,8 @@ app.get("/dashboard", upload.none(), ensureLogin, (req, res) =>
     User.findById(req.session.user.id).lean().exec().then((user) => {
             let data = {user:user};
             if (user.isAdmin) {
-                User.find().lean().exec().then((users) => {
-                        data['users'] = users;
+                Article.find().sort({date:"desc"}).lean().exec().then((articles) => {
+                        data['articles'] = articles;
                         res.render('dashboard',data);
                 });
             }
@@ -277,18 +277,37 @@ app.get("/create-article", ensureAdmin, checkLogin, (req,res) =>{
     res.render('createArticle', {user: req.userData} );
 });
 
+app.get("/edit-article/:id", ensureAdmin, checkLogin, (req,res) =>{
+    Article.findById(req.params.id).lean().exec().then((article)=>{
+        res.render('editArticle', {user: req.userData, article:article} );
+    });
+});
+
 app.post("/save-article", ensureAdmin, upload.single("image"), (req,res) =>{    
     const data = req.body;
-    if (data.title && data.author && data.content && req.file.filename){
-        new Article({
-            headline:data.title,
-            author:data.author,
-            image_path:"/resources/" + req.file.filename,
-            date:Date.now(),
-            content:data.content
-        }).save().then((article)=>{
-            res.redirect('/article/' + article._id);
-        });
+    if (data.title && data.author && data.content){
+        if (data.id) // update, not create new
+        { 
+            Article.findOneAndUpdate({_id:data.id}, {
+                headline:data.title,
+                author:data.author,
+                content:data.content
+            }).then((article)=>{
+                res.redirect('/article/' + article._id);
+            });
+        } 
+        else // create new
+        {
+            new Article({
+                headline:data.title,
+                author:data.author,
+                image_path:"/resources/" + req.file.filename,
+                date:Date.now(),
+                content:data.content
+            }).save().then((article)=>{
+                res.redirect('/article/' + article._id);
+            });
+        }
     } else res.send("Missing article content.");
 });
 

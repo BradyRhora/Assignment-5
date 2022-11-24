@@ -35,22 +35,21 @@
         </div>
 
         {{#if user.isAdmin}}
-        <div id="admin-panel" class="doubleCol">
+        <div id="admin-panel">
             <h2>Admin Panel</h2>
-            <p>Give and revoke admin privledges from users: <i>(Doesn't actually work yet)</i></p>
+            <p>Edit existing articles:</p>
             <table>
                 <tr>
-                    <th>User</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Is Admin</th>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Date Posted</th>
                 </tr>
-                {{#each users}}
+                {{#each articles}}
                 <tr>
-                    <td>{{userName}}</td>
-                    <td>{{firstName}} {{lastName}}</td>
-                    <td>{{email}}</td>
-                    <td><input type="checkbox" name="isadmin" {{#if isAdmin}} checked {{/if}}</td>
+                    <td>{{headline}}</td>
+                    <td>{{author}}</td>
+                    <td>{{date}}</td>
+                    <td><a href="/edit-article/{{_id}}"><button class="action-button">Edit</button></a></td>
                 </tr>
                 {{/each}}
             </table>
