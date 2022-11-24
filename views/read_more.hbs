@@ -3,7 +3,8 @@
 <main>
     <article>
         {{#if article}}
-        <img src="{{article.image_path}}"/>
+        <!--<img src="{{article.image_path}}"/>-->
+        <img src='data:image/png;base64,{{article.image}}'/>
         <h1>{{article.headline}}</h1>
         <h6>{{article.author}} - {{article.date}}</h6>
         

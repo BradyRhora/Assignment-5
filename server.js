@@ -40,10 +40,7 @@ const articleSchema = new Schema({
     "content": String,
     "date":Date,
     "author":String,
-    "image_path":{
-        "type":String,
-        "default":"/resources/placeholder.jpg"
-    }
+    "image":Buffer
 });
 
 const commentSchema = new Schema({
@@ -73,13 +70,8 @@ app.use(clientSessions({
     activeDuration: 3 * 1000 * 60 
   }));
 
-const storage = multer.diskStorage({
-    destination: "./static/resources/",
-    filename:function(req,file,cb){
-        cb(null,Date.now() + path.extname(file.originalname));
-    }
-})
 
+const storage = multer.memoryStorage()
 const upload = multer({storage:storage});
 
 function ensureLogin(req, res, next){
@@ -226,7 +218,10 @@ app.post("/register-user", upload.none(), (req,res) =>{
 app.get("/blog", checkLogin, (req,res) => {
     Article.find().sort({date:"desc"}).exec().then((articles)=>{
         articles = articles.map(value => {
+            
             let v = value.toObject()
+            
+            v.image = v.image.toString('base64');
             v.content = v.content.substring(0,70) + '...';
             return v;
         });
@@ -241,15 +236,17 @@ app.get("/blog", checkLogin, (req,res) => {
 app.get("/article/:id",checkLogin, (req,res) => {
     Article.findById(req.params.id).lean().exec().then((article)=>{
         if (article) {
+
             Comment.find({articleID:article._id}).sort({date:"asc"}).lean().exec().then((comments) =>{
                 comments.map(c=>{
                     c.date = c.date.toLocaleString("en-US");
                     return c;
-                })
+                });
 
-            let pageData = {article:article, comments:comments};
-            if (req.userData) pageData["user"] = req.userData;
-                res.render('read_more', pageData);
+                article.image = article.image.toString('base64');
+                let pageData = {article:article, comments:comments};
+                if (req.userData) pageData["user"] = req.userData;
+                    res.render('read_more', pageData);
             });
         } else res.render('error', {error:"Article not found."});
     });
@@ -305,7 +302,7 @@ app.post("/save-article", ensureAdmin, upload.single("image"), (req,res) =>{
             new Article({
                 headline:data.title,
                 author:data.author,
-                image_path:"/resources/" + req.file.filename,
+                image: req.file.buffer,
                 date:Date.now(),
                 content:data.content
             }).save().then((article)=>{

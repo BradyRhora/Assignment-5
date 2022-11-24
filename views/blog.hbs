@@ -5,13 +5,13 @@
         {{#each data}}
             {{#if @first}}
             <a href="/article/{{_id}}" class="article doubleCol">
-                <div class="imgContainer"><img src="{{image_path}}"></img></div>
+                <div class="imgContainer"><img src="data:image/png;base64,{{image}}"></img></div>
                 <h2>{{headline}}</h2>
                 <p>{{content}}</p>
             </a>
             {{else}}
             <a href="/article/{{_id}}" class="article">
-                <div class="imgContainer"><img src="{{image_path}}"></img></div>
+                <div class="imgContainer"><img src="data:image/png;base64,{{image}}"></img></div>
                 <h2>{{headline}}</h2>
                 <p>{{content}}</p>
             </a>
