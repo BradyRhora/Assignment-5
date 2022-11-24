@@ -8,7 +8,7 @@ const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
 const clientSessions = require("client-sessions");
 
-mongoose.connect(process.env.mongooseToken || 'mongodb+srv://BH_Admin:CVk8DOObYwNA8IH4@web322-assgn4.lkedtm2.mongodb.net/bradyhosting_db?retryWrites=true&w=majority');
+mongoose.connect(process.env.mongooseToken);
 
 const userSchema = new Schema({
     "userName": {
